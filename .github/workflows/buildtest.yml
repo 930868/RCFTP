@@ -42,7 +42,7 @@ jobs:
 
     - name: Check received file
       run: |
-        if cmp -s mificheroaleatorio f_recibido; then
+        if cmp -s mificheroaleatorio rcftpd/f_recibido; then
           echo "OK: Files match"
         else
           echo "ERROR: Files differ"
