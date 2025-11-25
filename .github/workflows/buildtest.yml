@@ -16,15 +16,25 @@ jobs:
     - name: Install dependencies (if needed)
       run: sudo apt-get update
 
-    - name: Build project
-      run: make
-
+    - name: Build client
+      run: |
+        cd rcftpclient
+        make clean
+        make all
+        cd ..
+    - name: Build server
+      run: |
+        cd rcftpd
+        make clean
+        make all
+        cd ..
+      
     - name: Generate random file (20 KB)
       run: dd if=/dev/urandom of=mificheroaleatorio bs=1000 count=20
 
     - name: Start server in background
       run: |
-        ./rcftpserver -p 32002 &
+        ./rcftpd/rcftpd -p 32002 &
         echo $! > server_pid
 
     - name: Give server time to start
@@ -32,7 +42,7 @@ jobs:
 
     - name: Run client (pipe file)
       run: |
-        cat mificheroaleatorio | ./rcftpclient -v -a1 -d 127.0.0.1 -p 32002
+        cat mificheroaleatorio | ./rcftpclient/rcftpclient -v -a1 -d 127.0.0.1 -p 32002
 
     - name: Kill server
       run: kill "$(cat server_pid)"
