@@ -1,8 +1,9 @@
 name: C-FTP Test
 
 on:
-  push:
-  pull_request:
+  push: 
+    branches:
+      "main"
 
 jobs:
   build-and-test:
