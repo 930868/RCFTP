@@ -42,7 +42,7 @@ jobs:
 
     - name: Run client (pipe file)
       run: |
-        cat mificheroaleatorio | ./rcftpclient/rcftpclient -v -a1 -d 127.0.0.1 -p 32002
+        cat mificheroaleatorio | ./rcftpclient/rcftpclient -v -a1 -d127.0.0.1 -p32002
 
     - name: Kill server
       run: kill "$(cat server_pid)"
