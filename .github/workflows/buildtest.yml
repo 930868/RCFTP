@@ -1,32 +1,46 @@
-# This is a basic workflow to help you get started with Actions
+name: C-FTP Test
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  build-and-test:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Client compile
-        run: cd rcftpclient && make clean && make all && cd ..
-      - name: Server compile
-        run: cd rcftpd && make clean && make all && cd ..
-      
+    - name: Install dependencies (if needed)
+      run: sudo apt-get update
+
+    - name: Build project
+      run: make
+
+    - name: Generate random file (20 KB)
+      run: dd if=/dev/urandom of=mificheroaleatorio bs=1000 count=20
+
+    - name: Start server in background
+      run: |
+        ./rcftpserver -p 32002 &
+        echo $! > server_pid
+
+    - name: Give server time to start
+      run: sleep 1
+
+    - name: Run client (pipe file)
+      run: |
+        cat mificheroaleatorio | ./rcftpclient -v -a1 -d 127.0.0.1 -p 32002
+
+    - name: Kill server
+      run: kill "$(cat server_pid)"
+
+    - name: Check received file
+      run: |
+        if cmp -s mificheroaleatorio f_recibido; then
+          echo "OK: Files match"
+        else
+          echo "ERROR: Files differ"
+          exit 1
+        fi
