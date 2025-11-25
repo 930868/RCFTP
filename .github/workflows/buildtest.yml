@@ -31,7 +31,7 @@ jobs:
 
     - name: Start server in background
       run: |
-        ./rcftpd/rcftpd -p 32002 &
+        ./rcftpd/rcftpd -p32002 &
 
     - name: Give server time to start
       run: sleep 2
