@@ -13,9 +13,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install dependencies (if needed)
-      run: sudo apt-get update
-
     - name: Build client
       run: |
         cd rcftpclient
@@ -35,17 +32,13 @@ jobs:
     - name: Start server in background
       run: |
         ./rcftpd/rcftpd -p 32002 &
-        echo $! > server_pid
 
     - name: Give server time to start
-      run: sleep 1
+      run: sleep 2
 
     - name: Run client (pipe file)
       run: |
         cat mificheroaleatorio | ./rcftpclient/rcftpclient -v -a1 -d127.0.0.1 -p32002
-
-    - name: Kill server
-      run: kill "$(cat server_pid)"
 
     - name: Check received file
       run: |
