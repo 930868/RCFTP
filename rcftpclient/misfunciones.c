@@ -255,12 +255,30 @@ int initsocket(struct addrinfo *servinfo, char f_verbose){
 
     return sock;
 }
-
+/*
+    struct rcftp_msg {
+        uint8_t version;
+        uint8_t flags;
+        uint16_t sum;
+        uint32_t numseq;
+        uint32_t next;
+        uint16_t len;
+        uint8_t buffer[RCFTP_BUFLEN];
+    };
+*/
 
 /**************************************************************************/
 /*  algoritmo 1 (basico)  */
 /**************************************************************************/
 void alg_basico(int socket, struct addrinfo *servinfo) {
+    int ultimoMensaje = 0;
+    int ultimoMensajeConfirmado = 0;
+
+    char datos[RCFTP_BUFLEN];
+    scanf("%s",datos);
+    struct rcftp_msg msg = {RCFTP_VERSION_1,F_NOFLAGS,0};
+
+
 
 	printf("Comunicación con algoritmo básico\n");
 
@@ -289,5 +307,4 @@ void alg_ventana(int socket, struct addrinfo *servinfo,int window) {
 #warning FALTA IMPLEMENTAR EL ALGORITMO GO-BACK-N
 	printf("Algoritmo no implementado\n");
 }
-
 
