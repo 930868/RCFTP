@@ -266,17 +266,22 @@ int initsocket(struct addrinfo *servinfo, char f_verbose){
         uint8_t buffer[RCFTP_BUFLEN];
     };
 */
-void construirMensajeRCFTP(struct rcftp_msg *msg, uint8_t flags, uint32_t numseq, uint16_t size) {
+void construirMensajeRCFTP(struct rcftp_msg *msg, uint8_t flags, uint32_t numseq, uint16_t len) {
     msg->version = RCFTP_VERSION_1;
     msg->flags = flags;
-    msg->numseq = numseq;
+    msg->numseq = htonl(numseq);
     msg->next = 0;
-    msg->len = size;
-    msg->sum = xsum((uint8_t)msg->buffer,size);
+    msg->len = htons(len);
+    msg->sum = 0;
+    msg->sum = xsum((char *)msg,sizeof(struct rcftp_msg));
 }
 
 int respuestaEsperada(const struct rcftp_msg *msg, const struct rcftp_msg *res) {
-    return (msg->numseq+msg->len == res->next && res->flags != F_BUSY && res->flags != F_ABORT);
+    if (ntohl(msg->numseq)+ntohs(msg->len) == ntohl(res->next)) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 /**************************************************************************/
@@ -285,34 +290,39 @@ int respuestaEsperada(const struct rcftp_msg *msg, const struct rcftp_msg *res) 
 void alg_basico(int socket, struct addrinfo *servinfo) {
     unsigned char ultimoMensaje = 0;
     unsigned char ultimoMensajeConfirmado = 0;
-    int size, totalSize = 0;
+    unsigned int len = 0, numeroSecuencia = 0, flags = 0;
     struct rcftp_msg mensaje,respuesta;
 
-    size = readtobuffer(&mensaje.buffer,RCFTP_BUFLEN);
-    if (size == 0) ultimoMensaje = 1;
-
-    construirMensajeRCFTP(&mensaje,F_NOFLAGS,totalSize,size);
+    len = readtobuffer((char *)mensaje.buffer,RCFTP_BUFLEN);
     
+    if (len == 1 && mensaje.buffer[0] == 4) {
+        ultimoMensaje = 1;
+        flags = F_FIN;
+    }
+
+    construirMensajeRCFTP(&mensaje,flags,numeroSecuencia,len);
+    numeroSecuencia+=len;
+
     while (!ultimoMensajeConfirmado) {
-        //enviar
-        sendto(socket, &mensaje, sizeof mensaje, totalSize, servinfo->ai_addr, servinfo->ai_addrlen);
-        totalSize+=size;
-        //recibir
-        recvfrom(socket, &respuesta, sizeof respuesta, 0, servinfo->ai_addr, (socklen_t)servinfo->ai_addrlen);
-        // mensajeValido && respuestaEsperada
-        if (issumvalid(&mensaje,size) && respuesta.numseq == respuestaEsperada(&mensaje,&respuesta)) {
+        sendto(socket, &mensaje, sizeof mensaje, 0, servinfo->ai_addr, servinfo->ai_addrlen);
+        recvfrom(socket, &respuesta, sizeof respuesta, 0, servinfo->ai_addr, &servinfo->ai_addrlen);
+        
+        if (issumvalid(&respuesta,sizeof(struct rcftp_msg)) && respuestaEsperada(&mensaje,&respuesta)) {
             if (ultimoMensaje) {
                 ultimoMensajeConfirmado = 1;
             } else {
-                size = readtobuffer(&mensaje.buffer,RCFTP_BUFLEN);
-                if (size == 0) ultimoMensaje = 1;
-                construirMensajeRCFTP(&mensaje,F_NOFLAGS,totalSize,size);
+                len = readtobuffer((char *)mensaje.buffer,RCFTP_BUFLEN);
+
+                if (len == 1 && mensaje.buffer[0] == 4) {
+                    ultimoMensaje = 1;
+                    flags = F_FIN;
+                }
+
+                construirMensajeRCFTP(&mensaje,flags,numeroSecuencia,len);
+                numeroSecuencia+=len;
             }
         }
     }
-
-#warning FALTA PROBAR
-
 }
 
 /**************************************************************************/
