@@ -276,32 +276,45 @@ void construirMensajeRCFTP(struct rcftp_msg *msg,const char *datos[RCFTP_BUFLEN]
     msg->buffer = datos;
 }
 
-
+int respuestaEsperada(const struct rcftp_msg *msg, const struct rcftp_msg *res) {
+    return (msg->numseq+msg->len == res->next && res->flags != F_BUSY && res->flags != F_ABORT);
+}
 
 /**************************************************************************/
 /*  algoritmo 1 (basico)  */
 /**************************************************************************/
 void alg_basico(int socket, struct addrinfo *servinfo) {
-    int ultimoMensaje = 0;
-    int ultimoMensajeConfirmado = 0;
-
+    unsigned char ultimoMensaje = 0;
+    unsigned char ultimoMensajeConfirmado = 0;
+    int size, totalSize = 0;
     char datos[RCFTP_BUFLEN];
-    struct rcftp_msg msg;
-    scanf("%s",datos);
+    struct rcftp_msg mensaje,respuesta;
 
-    if ((int)datos[0] == 4) {
-        construirMensajeRCFTP(&msg,datos,F_FIN,0);
-    } else {
-        construirMensajeRCFTP(&msg,datos,F_NOFLAGS,0);
-        ultimoMensaje = 1;
+    size = readtobuffer(&datos,sizeof datos);
+    if (size == 0) ultimoMensaje = 1;
+
+    construirMensajeRCFTP(&mensaje,datos,F_NOFLAGS,totalSize);
+    
+    while (!ultimoMensajeConfirmado) {
+        //enviar
+        sendto(socket,&mensaje,sizeof mensaje,totalSize,servinfo->ai_addr,servinfo->ai_addrlen);
+        totalSize+=size;
+        //recibir
+        recvfrom(socket,&respuesta,sizeof respuesta,servinfo->ai_addr,servinfo->ai_addrlen);
+        // mensajeValido && respuestaEsperada
+        if (issumvalid(&mensaje,size) && respuesta.numseq == respuestaEsperada()) {
+            if (ultimoMensaje) {
+                ultimoMensajeConfirmado = 1;
+            } else {
+                size = readtobuffer(&datos,sizeof datos);
+                if (size == 0) ultimoMensaje = 1;
+                construirMensajeRCFTP(&mensaje,datos,F_NOFLAGS,totalSize);
+            }
+        }
     }
 
+#warning FALTA PROBAR
 
-
-	printf("Comunicación con algoritmo básico\n");
-
-#warning FALTA IMPLEMENTAR EL ALGORITMO BASICO
-	printf("Algoritmo no implementado\n");
 }
 
 /**************************************************************************/
