@@ -290,12 +290,12 @@ int respuestaEsperada(const struct rcftp_msg *msg, const struct rcftp_msg *res) 
 void alg_basico(int socket, struct addrinfo *servinfo) {
     unsigned char ultimoMensaje = 0;
     unsigned char ultimoMensajeConfirmado = 0;
-    unsigned int len = 0, numeroSecuencia = 0, flags = 0;
+    int len = 0, numeroSecuencia = 0, flags = 0;
     struct rcftp_msg mensaje,respuesta;
 
     len = readtobuffer((char *)mensaje.buffer,RCFTP_BUFLEN);
     
-    if (len == 1 && mensaje.buffer[0] == 4) {
+    if (len <= 0) {
         ultimoMensaje = 1;
         flags = F_FIN;
     }
@@ -313,7 +313,7 @@ void alg_basico(int socket, struct addrinfo *servinfo) {
             } else {
                 len = readtobuffer((char *)mensaje.buffer,RCFTP_BUFLEN);
 
-                if (len == 1 && mensaje.buffer[0] == 4) {
+                if (len <= 0) {
                     ultimoMensaje = 1;
                     flags = F_FIN;
                 }
