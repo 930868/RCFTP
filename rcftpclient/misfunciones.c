@@ -266,6 +266,17 @@ int initsocket(struct addrinfo *servinfo, char f_verbose){
         uint8_t buffer[RCFTP_BUFLEN];
     };
 */
+void construirMensajeRCFTP(struct rcftp_msg *msg,const char *datos[RCFTP_BUFLEN],const uint8_t flags, const uint32_t numseq) {
+    msg->version = RCFTP_VERSION_1;
+    msg->flags = flags;
+    msg->sum = xsum(datos,sizeof datos);
+    msg->numseq = numseq;
+    msg->next = 0;
+    msg->len = sizeof datos;
+    msg->buffer = datos;
+}
+
+
 
 /**************************************************************************/
 /*  algoritmo 1 (basico)  */
@@ -275,8 +286,15 @@ void alg_basico(int socket, struct addrinfo *servinfo) {
     int ultimoMensajeConfirmado = 0;
 
     char datos[RCFTP_BUFLEN];
+    struct rcftp_msg msg;
     scanf("%s",datos);
-    struct rcftp_msg msg = {RCFTP_VERSION_1,F_NOFLAGS,0};
+
+    if ((int)datos[0] == 4) {
+        construirMensajeRCFTP(&msg,datos,F_FIN,0);
+    } else {
+        construirMensajeRCFTP(&msg,datos,F_NOFLAGS,0);
+        ultimoMensaje = 1;
+    }
 
 
 
