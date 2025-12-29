@@ -266,14 +266,13 @@ int initsocket(struct addrinfo *servinfo, char f_verbose){
         uint8_t buffer[RCFTP_BUFLEN];
     };
 */
-void construirMensajeRCFTP(struct rcftp_msg *msg,const char *datos[RCFTP_BUFLEN],const uint8_t flags, const uint32_t numseq) {
+void construirMensajeRCFTP(struct rcftp_msg *msg, uint8_t flags, uint32_t numseq, uint16_t size) {
     msg->version = RCFTP_VERSION_1;
     msg->flags = flags;
-    msg->sum = xsum(datos,sizeof datos);
     msg->numseq = numseq;
     msg->next = 0;
-    msg->len = sizeof datos;
-    msg->buffer = datos;
+    msg->len = size;
+    msg->sum = xsum((uint8_t)msg->buffer,size);
 }
 
 int respuestaEsperada(const struct rcftp_msg *msg, const struct rcftp_msg *res) {
@@ -287,28 +286,27 @@ void alg_basico(int socket, struct addrinfo *servinfo) {
     unsigned char ultimoMensaje = 0;
     unsigned char ultimoMensajeConfirmado = 0;
     int size, totalSize = 0;
-    char datos[RCFTP_BUFLEN];
     struct rcftp_msg mensaje,respuesta;
 
-    size = readtobuffer(&datos,sizeof datos);
+    size = readtobuffer(&mensaje.buffer,RCFTP_BUFLEN);
     if (size == 0) ultimoMensaje = 1;
 
-    construirMensajeRCFTP(&mensaje,datos,F_NOFLAGS,totalSize);
+    construirMensajeRCFTP(&mensaje,F_NOFLAGS,totalSize,size);
     
     while (!ultimoMensajeConfirmado) {
         //enviar
-        sendto(socket,&mensaje,sizeof mensaje,totalSize,servinfo->ai_addr,servinfo->ai_addrlen);
+        sendto(socket, &mensaje, sizeof mensaje, totalSize, servinfo->ai_addr, servinfo->ai_addrlen);
         totalSize+=size;
         //recibir
-        recvfrom(socket,&respuesta,sizeof respuesta,servinfo->ai_addr,servinfo->ai_addrlen);
+        recvfrom(socket, &respuesta, sizeof respuesta, 0, servinfo->ai_addr, (socklen_t)servinfo->ai_addrlen);
         // mensajeValido && respuestaEsperada
-        if (issumvalid(&mensaje,size) && respuesta.numseq == respuestaEsperada()) {
+        if (issumvalid(&mensaje,size) && respuesta.numseq == respuestaEsperada(&mensaje,&respuesta)) {
             if (ultimoMensaje) {
                 ultimoMensajeConfirmado = 1;
             } else {
-                size = readtobuffer(&datos,sizeof datos);
+                size = readtobuffer(&mensaje.buffer,RCFTP_BUFLEN);
                 if (size == 0) ultimoMensaje = 1;
-                construirMensajeRCFTP(&mensaje,datos,F_NOFLAGS,totalSize);
+                construirMensajeRCFTP(&mensaje,F_NOFLAGS,totalSize,size);
             }
         }
     }
