@@ -38,13 +38,8 @@ jobs:
 
     - name: Run client (pipe file)
       run: |
-        cat mificheroaleatorio | ./rcftpclient/rcftpclient -v -a1 -d127.0.0.1 -p32002
+        ./rcftpclient/rcftpclient -v -a1 -d127.0.0.1 -p32002 <mificheroaleatorio
 
     - name: Check received file
-      run: |
-        if cmp -s mificheroaleatorio rcftpd/f_recibido; then
-          echo "OK: Files match"
-        else
-          echo "ERROR: Files differ"
-          exit 1
-        fi
+      run: cmp mificheroaleatorio rcftpd/f_recibido
+
